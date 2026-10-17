@@ -194,9 +194,7 @@ if usuario_actual:
                 
                 
                    
-                    file_name=f"reporte_banco_{usuario_actual}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
+                  
+              
 else:
     st.warning("👋 Tu espacio está protegido. Por favor, crea una cuenta en la pestaña 'Registrarse' o inicia sesión para ingresar a ver tus montos y realizar envíos.")
