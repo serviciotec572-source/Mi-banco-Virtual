@@ -4,12 +4,14 @@ import uuid
 import json
 import os
 import io
+import random
+import urllib.parse
 from datetime import datetime
 
 # 1. Configuración estética de la plataforma
-st.set_page_config(page_title="Mi Red Virtual Personal", page_icon="👤", layout="centered")
-st.title("💰 Mi Red Virtual Personal")
-st.write("Cada usuario cuenta con un espacio privado y seguro para gestionar sus créditos.")
+st.set_page_config(page_title="Mi Red Virtual Alfanumérica", page_icon="⚡", layout="centered")
+st.title("⚡ Red Virtual Financiera Alfanumérica")
+st.write("Manejo de créditos mediante códigos únicos. ¡Invita a tus amigos y gana bonos!")
 
 # 2. SISTEMA DE BASE DE DATOS PERMANENTE (Archivo JSON en el Servidor)
 ARCHIVO_BD = "base_datos_banco.json"
@@ -26,6 +28,11 @@ def cargar_base_datos():
 def guardar_base_datos(datos):
     with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=4)
+
+def generar_codigo_cuenta():
+    """Genera un código de cuenta alfanumérico único, ej: ACC-4F92B"""
+    codigo = "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=5))
+    return f"ACC-{codigo}"
 
 # Inicializar la base de datos leyendo el archivo JSON seguro
 if "base_datos_usuarios" not in st.session_state:
@@ -44,6 +51,9 @@ if opcion_ingreso == "Registrarse":
     reg_usuario = st.sidebar.text_input("Elige tu usuario:", key="reg_u").strip()
     reg_password = st.sidebar.text_input("Crea tu contraseña:", type="password", key="reg_p")
     
+    # Campo opcional para ingresar el código de invitación de un amigo
+    codigo_invitacion = st.sidebar.text_input("Código de Invitación (Opcional):", key="reg_inv").strip().upper()
+    
     if st.sidebar.button("🚀 Registrar mi espacio", use_container_width=True):
         st.session_state.base_datos_usuarios = cargar_base_datos()
         
@@ -52,17 +62,53 @@ if opcion_ingreso == "Registrarse":
         elif reg_usuario in st.session_state.base_datos_usuarios:
             st.sidebar.error("Este usuario ya está registrado.")
         else:
+            # Generar lista de personas base
+            nombres_base = [
+                "Tu_Cuenta_Principal", "Carlos_Mendoza", "Andrea_Restrepo", 
+                "Tienda_Oficina_Express", "Juan_Pablo_Diaz", "Maria_Camila_Silva", 
+                "Santiago_Gomez", "Valentina_Herrera", "Supermercado_Central", "Estacion_Servicio_Alfa"
+            ]
+            
+            cuentas_alfanumericas = {}
+            for i, nombre in enumerate(nombres_base):
+                codigo_acc = generar_codigo_cuenta()
+                # Saldo base (10 millones a la cuenta principal del creador)
+                saldo = 10000000 if i == 0 else random.randint(500000, 3000000)
+                cuentas_alfanumericas[codigo_acc] = {
+                    "titular": nombre,
+                    "saldo": saldo
+                }
+            
+            # Generar código de referido propio de este usuario (ej: REF-JUAN7)
+            codigo_referido_propio = f"REF-{reg_usuario[:4].upper()}{random.randint(10,99)}"
+            
             st.session_state.base_datos_usuarios[reg_usuario] = {
                 "password": reg_password,
-                "cuentas": {
-                    "Cuenta_Principal": 10000000,
-                    "Amigo_Ejemplo": 2000000,
-                    "Tienda_Oficina": 0
-                },
+                "codigo_referido": codigo_referido_propio,
+                "cuentas": accounts_data := cuentas_alfanumericas,
                 "historial": []
             }
+            
+            # LÓGICA DEL BOT DE BONOS: Si usó un código válido, sumamos 50.000 créditos
+            bono_aplicado = False
+            if codigo_invitacion != "":
+                for usuario_sistema, datos_sistema in st.session_state.base_datos_usuarios.items():
+                    if datos_sistema.get("codigo_referido") == codigo_invitacion:
+                        # Encontrar la cuenta principal de quien lo invitó y sumarle el bono
+                        primera_cuenta_anfitrion = list(datos_sistema["cuentas"].keys())[0]
+                        datos_sistema["cuentas"][primera_cuenta_anfitrion]["saldo"] += 50000
+                        
+                        # Sumarle el bono a la cuenta principal del nuevo usuario
+                        primera_cuenta_nuevo = list(accounts_data.keys())[0]
+                        accounts_data[primera_cuenta_nuevo]["saldo"] += 50000
+                        bono_aplicado = True
+                        break
+            
             guardar_base_datos(st.session_state.base_datos_usuarios)
-            st.sidebar.success("¡Espacio guardado! Cambia a 'Iniciar Sesión' e ingresa.")
+            if bono_aplicado:
+                st.sidebar.success(f"🎁 ¡Bono activado! +50.000 créditos para ti y tu amigo. Inicia sesión.")
+            else:
+                st.sidebar.success("¡Espacio guardado! Inicia sesión.")
 
 elif opcion_ingreso == "Iniciar Sesión":
     st.sidebar.subheader("🔑 Ingresar al Sistema")
@@ -79,7 +125,6 @@ elif opcion_ingreso == "Iniciar Sesión":
         else:
             st.sidebar.error("Usuario o contraseña incorrectos.")
 
-# Control de sesión activa y botón de guardado total
 if "usuario_logueado" in st.session_state:
     usuario_actual = st.session_state["usuario_logueado"]
     st.sidebar.markdown("---")
@@ -91,110 +136,72 @@ if "usuario_logueado" in st.session_state:
         st.rerun()
 
 # ==========================================
-# CUERPO PRINCIPAL: BLOQUEADO SIN INICIO DE SESIÓN
+# CUERPO PRINCIPAL: VISIBLE CON SESIÓN
 # ==========================================
 if usuario_actual:
     mis_datos = st.session_state.base_datos_usuarios[usuario_actual]
-    tab1, tab2, tab3 = st.tabs(["📊 Gestión de Cuentas y Saldos", "⚡ Enviar Fondos", "🔍 Historial, Fechas y Filtros"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Directorio y Saldos", "⚡ Envíos Alfanuméricos", "🔍 Auditoría y Reportes", "📢 Invitar Amigos (Bot Social)"])
     
-    # PESTAÑA 1: MOSTRAR SALDOS Y CAMBIAR NOMBRES
+    # ------------------------------------------
+    # PESTAÑA 1: DIRECTORIO DE CUENTAS ALFANUMÉRICAS
+    # ------------------------------------------
     with tab1:
-        st.subheader("💵 Listado de Cuentas en tu Red")
-        df_saldos = pd.DataFrame(list(mis_datos["cuentas"].items()), columns=["Nombre de Cuenta", "Saldo Actual (Créditos)"])
+        st.subheader("📋 Cuentas Alfanuméricas Autorizadas")
+        tabla_saldos = []
+        for codigo, info in mis_datos["cuentas"].items():
+            tabla_saldos.append({
+                "Código de Cuenta": codigo,
+                "Titular de la Cuenta": info["titular"],
+                "Saldo Disponible (COP)": info["saldo"]
+            })
+        
+        df_saldos = pd.DataFrame(tabla_saldos)
         st.dataframe(df_saldos, use_container_width=True, hide_index=True)
         
         st.markdown("---")
-        st.subheader("✏️ Cambiar Nombre o Configurar Monto de una Cuenta")
-        cuenta_a_cambiar = st.selectbox("Selecciona la cuenta a modificar:", list(mis_datos["cuentas"].keys()))
-        nuevo_nombre = st.text_input("Modificar Nombre:", value=cuenta_a_cambiar)
-        nuevo_monto_directo = st.number_input("Modificar Monto Directamente:", min_value=0, value=int(mis_datos["cuentas"][cuenta_a_cambiar]), step=1000)
+        st.subheader("✏️ Configurar Titular o Monto")
+        cuenta_a_cambiar = st.selectbox("Selecciona la cuenta (Código):", list(mis_datos["cuentas"].keys()))
+        nombre_actual = mis_datos["cuentas"][cuenta_a_cambiar]["titular"]
+        monto_actual = mis_datos["cuentas"][cuenta_a_cambiar]["saldo"]
         
-        if st.button("💾 Guardar Cambios en la Cuenta", use_container_width=True):
-            nuevo_nombre = nuevo_nombre.strip()
-            if nuevo_nombre == "":
-                st.error("El nombre no puede estar vacío.")
+        nuevo_titular = st.text_input("Modificar Titular:", value=nombre_actual)
+        nuevo_monto_directo = st.number_input("Modificar Saldo Directamente:", min_value=0, value=int(monto_actual), step=1000)
+        
+        if st.button("💾 Guardar Cambios", use_container_width=True):
+            nuevo_titular = nuevo_titular.strip()
+            if nuevo_titular == "":
+                st.error("El nombre del titular no puede estar vacío.")
             else:
-                if nuevo_nombre != cuenta_a_cambiar:
-                    mis_datos["cuentas"].pop(cuenta_a_cambiar)
-                mis_datos["cuentas"][nuevo_nombre] = nuevo_monto_directo
+                mis_datos["cuentas"][cuenta_a_cambiar]["titular"] = nuevo_titular
+                mis_datos["cuentas"][cuenta_a_cambiar]["saldo"] = nuevo_monto_directo
                 guardar_base_datos(st.session_state.base_datos_usuarios)
-                st.success(f"¡Cambios guardados! '{cuenta_a_cambiar}' se actualizó correctamente.")
+                st.success(f"¡Cuenta {cuenta_a_cambiar} actualizada con éxito!")
                 st.rerun()
 
-    # PESTAÑA 2: ENVIAR DINERO CON CONTROL DE MONTOS
+    # ------------------------------------------
+    # PESTAÑA 2: ENVIAR DINERO CON CÓDIGOS DE CUENTA
+    # ------------------------------------------
     with tab2:
-        st.subheader("⚡ Transferencia Inmediata")
-        usuarios_disponibles = list(mis_datos["cuentas"].keys())
+        st.subheader("⚡ Transferencia Inmediata por Código")
+        opciones_combo = {k: f"{k} ({v['titular']})" for k, v in mis_datos["cuentas"].items()}
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            emisor = st.selectbox("¿Quién envía?", usuarios_disponibles, key="emisor")
+            emisor_cod = st.selectbox("Cuenta Origen:", list(opciones_combo.keys()), format_func=lambda x: opciones_combo[x], key="em_c")
         with col2:
-            receptores_filtrados = [u for u in usuarios_disponibles if u != emisor]
-            receptor = st.selectbox("¿Quién recibe?", receptores_filtrados, key="receptor")
+            receptores_filtrados = [k for k in opciones_combo.keys() if k != emisor_cod]
+            receptor_cod = st.selectbox("Cuenta Destino:", receptores_filtrados, format_func=lambda x: opciones_combo[x], key="re_c")
         with col3:
-            monto = st.number_input("Monto a enviar:", min_value=1, value=5000, step=500)
+            monto = st.number_input("Monto a enviar:", min_value=1, value=10000, step=1000)
             
-        if st.button("🚀 Confirmar Envío Inmediato", use_container_width=True):
-            if mis_datos["cuentas"][emisor] < monto:
-                st.error(f"❌ Transferencia rechazada: {emisor} no tiene fondos suficientes.")
+        if st.button("🚀 Ejecutar Transferencia Alfanumérica", use_container_width=True):
+            if mis_datos["cuentas"][emisor_cod]["saldo"] < monto:
+                st.error(f"❌ Fondos insuficientes en la cuenta {emisor_cod}.")
             else:
-                mis_datos["cuentas"][emisor] -= monto
-                mis_datos["cuentas"][receptor] += monto
+                mis_datos["cuentas"][emisor_cod]["saldo"] -= monto
+                mis_datos["cuentas"][receptor_cod]["saldo"] += monto
                 
                 ahora = datetime.now()
-                tx_id = str(uuid.uuid4())[:8]
+                tx_id = f"TX-{str(uuid.uuid4())[:6].upper()}"
+                
                 registro = {
-                    "ID Transacción": tx_id,
-                    "Fecha": ahora.strftime("%Y-%m-%d"),
-                    "Hora": ahora.strftime("%H:%M:%S"),
-                    "Origen (Envía)": emisor,
-                    "Destino (Recibe)": receptor,
-                    "Monto Enviado": monto
-                }
-                mis_datos["historial"].insert(0, registro)
-                guardar_base_datos(st.session_state.base_datos_usuarios)
-                st.success(f"⚡ ¡Éxito! [{tx_id}] Enviado correctamente.")
-                st.rerun()
-
-    # PESTAÑA 3: FILTROS, HISTORIAL CON FECHA/HORA Y EXCEL
-    with tab3:
-        st.subheader("📜 Libro Contable (Historial de Envíos)")
-        
-        if len(mis_datos["historial"]) == 0:
-            st.info("Aún no registras movimientos en tu historial de envíos.")
-        else:
-            df_historial = pd.DataFrame(mis_datos["historial"])
-            
-            col_f1, col_f2 = st.columns(2)
-            with col_f1:
-                filtro_persona = st.text_input("🔍 Buscar por Nombre (Quién envía o recibe):").strip()
-            with col_f2:
-                monto_minimo = st.number_input("💰 Filtrar por Montos mayores o iguales a:", min_value=0, value=0)
-                
-            df_filtrado = df_historial.copy()
-            if filtro_persona != "":
-                df_filtrado = df_filtrado[
-                    (df_filtrado["Origen (Envía)"].str.contains(filtro_persona, case=False)) | 
-                    (df_filtrado["Destino (Recibe)"].str.contains(filtro_persona, case=False))
-                ]
-            if monto_minimo > 0:
-                df_filtrado = df_filtrado[df_filtrado["Monto Enviado"] >= monto_minimo]
-                
-            if df_filtrado.empty:
-                st.warning("No se encontraron transferencias que coincidan con la búsqueda.")
-            
-            # Lógica plana sin bloques 'else' conflictivos para prevenir fugas y errores de sangría
-            if not df_filtrado.empty:
-                st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
-                st.markdown("---")
-                st.subheader("📥 Descargar Reporte")
-                
-               
-                
-                
-                   
-                  
-              
-else:
-    st.warning("👋 Tu espacio está protegido. Por favor, crea una cuenta en la pestaña 'Registrarse' o inicia sesión para ingresar a ver tus montos y realizar envíos.")
