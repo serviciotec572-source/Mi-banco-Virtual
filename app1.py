@@ -201,10 +201,27 @@ if usuario_actual:
                     (df_filtrado["Origen (Envía)"].str.contains(filtro_persona, case=False)) | 
                     (df_filtrado["Destino (Recibe)"].str.contains(filtro_persona, case=False))
                 ]
-            if monto_minimo > 0:
-                df_filtrado = df_filtrado[df_filtrado["Monto Enviado"] >= monto_minimo]
-                
             if df_filtrado.empty:
                 st.warning("No se encontraron transferencias que coincidan con la búsqueda.")
             else:
                 # Mostrar tabla en la pantalla con las columnas de Fecha, Hora y Montos
+                st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+                
+                st.markdown("---")
+                st.subheader("📥 Descargar Reporte")
+                
+                # Conversión limpia a archivo binario de Excel
+                buffer_excel = io.BytesIO()
+                with pd.ExcelWriter(buffer_excel, engine="openpyxl") as writer:
+                    df_filtrado.to_excel(writer, index=False, sheet_name="Historial_Pagos")
+                
+                st.download_button(
+                    label="🟢 Descargar este Historial Filtrado en Excel (.xlsx)",
+                    data=buffer_excel.getvalue(),
+                    file_name=f"reporte_banco_{usuario_actual}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+else:
+    # Pantalla de bienvenida bloqueada para proteger los datos
+    st.warning("👋 Tu espacio está protegido. Por favor, crea una cuenta en la pestaña 'Registrarse' o inicia sesión para ingresar a ver tus montos y realizar envíos.")
