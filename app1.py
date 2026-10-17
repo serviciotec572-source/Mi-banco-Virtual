@@ -192,8 +192,7 @@ if usuario_actual:
                 
                
                 
-                st.download_button(
-                    label="🟢 Descargar este Historial Filtrado en Excel (.xlsx)",
+                
                    
                     file_name=f"reporte_banco_{usuario_actual}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
