@@ -124,7 +124,7 @@ if usuario_actual:
             receptores_filtrados = [u for u in usuarios_disponibles if u != emisor]
             receptor = st.selectbox("¿Quién recibe?", receptores_filtrados, key="receptor")
         with col3:
-            monto = st.number_input("Monto:", min_value=1, value=1000, step=500)
+            monto = st.number_input("Monto:", min_value=1, value=5000000000000000000000, step=500)
             
         if st.button("🚀 Confirmar Envío", use_container_width=True):
             if mis_datos["cuentas"][emisor] < monto:
