@@ -15,7 +15,6 @@ st.write("Cada usuario cuenta con un espacio privado y seguro para gestionar sus
 ARCHIVO_BD = "base_datos_banco.json"
 
 def cargar_base_datos():
-    """Lee el archivo del disco. Si no existe, devuelve una base de datos vacía."""
     if not os.path.exists(ARCHIVO_BD):
         return {}
     try:
@@ -25,7 +24,6 @@ def cargar_base_datos():
         return {}
 
 def guardar_base_datos(datos):
-    """Guarda todos los cambios inmediatamente en el servidor."""
     with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=4)
 
@@ -54,18 +52,17 @@ if opcion_ingreso == "Registrarse":
         elif reg_usuario in st.session_state.base_datos_usuarios:
             st.sidebar.error("Este usuario ya está registrado.")
         else:
-            # Crear espacio exclusivo para este amigo con montos iniciales controlados
             st.session_state.base_datos_usuarios[reg_usuario] = {
                 "password": reg_password,
                 "cuentas": {
-                    "Cuenta_Principal": 10000000,  # 10 Millones base
-                    "Amigo_Ejemplo": 2000000,      # 2 Millones
+                    "Cuenta_Principal": 10000000,
+                    "Amigo_Ejemplo": 2000000,
                     "Tienda_Oficina": 0
                 },
                 "historial": []
             }
             guardar_base_datos(st.session_state.base_datos_usuarios)
-            st.sidebar.success("¡Espacio guardado! Ahora cambia a 'Iniciar Sesión' e ingresa.")
+            st.sidebar.success("¡Espacio guardado! Cambia a 'Iniciar Sesión' e ingresa.")
 
 elif opcion_ingreso == "Iniciar Sesión":
     st.sidebar.subheader("🔑 Ingresar al Sistema")
@@ -97,15 +94,10 @@ if "usuario_logueado" in st.session_state:
 # CUERPO PRINCIPAL: BLOQUEADO SIN INICIO DE SESIÓN
 # ==========================================
 if usuario_actual:
-    # Cargar los datos exclusivos del amigo que inició sesión
     mis_datos = st.session_state.base_datos_usuarios[usuario_actual]
-    
-    # Organización en pestañas para mayor comodidad visual
     tab1, tab2, tab3 = st.tabs(["📊 Gestión de Cuentas y Saldos", "⚡ Enviar Fondos", "🔍 Historial, Fechas y Filtros"])
     
-    # ------------------------------------------
     # PESTAÑA 1: MOSTRAR SALDOS Y CAMBIAR NOMBRES
-    # ------------------------------------------
     with tab1:
         st.subheader("💵 Listado de Cuentas en tu Red")
         df_saldos = pd.DataFrame(list(mis_datos["cuentas"].items()), columns=["Nombre de Cuenta", "Saldo Actual (Créditos)"])
@@ -114,8 +106,6 @@ if usuario_actual:
         st.markdown("---")
         st.subheader("✏️ Cambiar Nombre o Configurar Monto de una Cuenta")
         cuenta_a_cambiar = st.selectbox("Selecciona la cuenta a modificar:", list(mis_datos["cuentas"].keys()))
-        
-        # Opciones para modificar la cuenta elegida
         nuevo_nombre = st.text_input("Modificar Nombre:", value=cuenta_a_cambiar)
         nuevo_monto_directo = st.number_input("Modificar Monto Directamente:", min_value=0, value=int(mis_datos["cuentas"][cuenta_a_cambiar]), step=1000)
         
@@ -124,19 +114,14 @@ if usuario_actual:
             if nuevo_nombre == "":
                 st.error("El nombre no puede estar vacío.")
             else:
-                # Si cambió el nombre, removemos la clave vieja
                 if nuevo_nombre != cuenta_a_cambiar:
                     mis_datos["cuentas"].pop(cuenta_a_cambiar)
-                
-                # Asignamos el nuevo nombre y el nuevo monto configurado
                 mis_datos["cuentas"][nuevo_nombre] = nuevo_monto_directo
                 guardar_base_datos(st.session_state.base_datos_usuarios)
                 st.success(f"¡Cambios guardados! '{cuenta_a_cambiar}' se actualizó correctamente.")
                 st.rerun()
 
-    # ------------------------------------------
     # PESTAÑA 2: ENVIAR DINERO CON CONTROL DE MONTOS
-    # ------------------------------------------
     with tab2:
         st.subheader("⚡ Transferencia Inmediata")
         usuarios_disponibles = list(mis_datos["cuentas"].keys())
@@ -148,27 +133,21 @@ if usuario_actual:
             receptores_filtrados = [u for u in usuarios_disponibles if u != emisor]
             receptor = st.selectbox("¿Quién recibe?", receptores_filtrados, key="receptor")
         with col3:
-            # Ponemos un valor base cómodo para evitar el error de números gigantes
             monto = st.number_input("Monto a enviar:", min_value=1, value=5000, step=500)
             
         if st.button("🚀 Confirmar Envío Inmediato", use_container_width=True):
             if mis_datos["cuentas"][emisor] < monto:
                 st.error(f"❌ Transferencia rechazada: {emisor} no tiene fondos suficientes.")
             else:
-                # Restar y sumar montos
                 mis_datos["cuentas"][emisor] -= monto
                 mis_datos["cuentas"][receptor] += monto
                 
-                # Capturar Fecha y Hora automática de Colombia
                 ahora = datetime.now()
-                fecha_envio = ahora.strftime("%Y-%m-%d")
-                hora_envio = ahora.strftime("%H:%M:%S")
-                
                 tx_id = str(uuid.uuid4())[:8]
                 registro = {
                     "ID Transacción": tx_id,
-                    "Fecha": fecha_envio,
-                    "Hora": hora_envio,
+                    "Fecha": ahora.strftime("%Y-%m-%d"),
+                    "Hora": ahora.strftime("%H:%M:%S"),
                     "Origen (Envía)": emisor,
                     "Destino (Recibe)": receptor,
                     "Monto Enviado": monto
@@ -178,17 +157,15 @@ if usuario_actual:
                 st.success(f"⚡ ¡Éxito! [{tx_id}] Enviado correctamente.")
                 st.rerun()
 
-    # ------------------------------------------
     # PESTAÑA 3: FILTROS, HISTORIAL CON FECHA/HORA Y EXCEL
-    # ------------------------------------------
     with tab3:
         st.subheader("📜 Libro Contable (Historial de Envíos)")
+        
         if len(mis_datos["historial"]) == 0:
             st.info("Aún no registras movimientos en tu historial de envíos.")
         else:
             df_historial = pd.DataFrame(mis_datos["historial"])
             
-            # Filtros dinámicos en pantalla
             col_f1, col_f2 = st.columns(2)
             with col_f1:
                 filtro_persona = st.text_input("🔍 Buscar por Nombre (Quién envía o recibe):").strip()
@@ -206,5 +183,23 @@ if usuario_actual:
                 
             if df_filtrado.empty:
                 st.warning("No se encontraron transferencias que coincidan con la búsqueda.")
-            else:
-                # Mostrar tabla en la pantalla con las columnas de Fecha, Hora y Montos
+            
+            # Lógica plana sin bloques 'else' conflictivos para prevenir fugas y errores de sangría
+            if not df_filtrado.empty:
+                st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+                st.markdown("---")
+                st.subheader("📥 Descargar Reporte")
+                
+                buffer_excel = io.BytesIO()
+                with pd.ExcelWriter(buffer_excel, engine="openpyxl") as writer:
+                    df_filtrado.to_excel(writer, index=False, sheet_name="Historial_Pagos")
+                
+                st.download_button(
+                    label="🟢 Descargar este Historial Filtrado en Excel (.xlsx)",
+                    data=buffer_excel.getvalue(),
+                    file_name=f"reporte_banco_{usuario_actual}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+else:
+    st.warning("👋 Tu espacio está protegido. Por favor, crea una cuenta en la pestaña 'Registrarse' o inicia sesión para ingresar a ver tus montos y realizar envíos.")
