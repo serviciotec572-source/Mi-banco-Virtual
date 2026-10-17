@@ -202,6 +202,7 @@ if usuario_actual:
                     (df_filtrado["Destino (Recibe)"].str.contains(filtro_persona, case=False))
                 ]
             if df_filtrado.empty:
+ if df_filtrado.empty:
                 st.warning("No se encontraron transferencias que coincidan con la búsqueda.")
             else:
                 # Mostrar tabla en la pantalla con las columnas de Fecha, Hora y Montos
