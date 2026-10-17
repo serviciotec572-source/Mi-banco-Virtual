@@ -85,11 +85,11 @@ if opcion_ingreso == "Registrarse":
             st.session_state.base_datos_usuarios[reg_usuario] = {
                 "password": reg_password,
                 "codigo_referido": codigo_referido_propio,
-                "cuentas": accounts_data := cuentas_alfanumericas,
+                "cuentas": cuentas_alfanumericas,
                 "historial": []
             }
             
-            # LÓGICA DEL BOT DE BONOS: Si usó un código válido, sumamos 50.000 créditos
+            # LÓGICA DEL BOT DE BONOS COMPATIBLE
             bono_aplicado = False
             if codigo_invitacion != "":
                 for usuario_sistema, datos_sistema in st.session_state.base_datos_usuarios.items():
@@ -99,8 +99,8 @@ if opcion_ingreso == "Registrarse":
                         datos_sistema["cuentas"][primera_cuenta_anfitrion]["saldo"] += 50000
                         
                         # Sumarle el bono a la cuenta principal del nuevo usuario
-                        primera_cuenta_nuevo = list(accounts_data.keys())[0]
-                        accounts_data[primera_cuenta_nuevo]["saldo"] += 50000
+                        primera_cuenta_nuevo = list(cuentas_alfanumericas.keys())[0]
+                        cuentas_alfanumericas[primera_cuenta_nuevo]["saldo"] += 50000
                         bono_aplicado = True
                         break
             
@@ -111,7 +111,7 @@ if opcion_ingreso == "Registrarse":
                 st.sidebar.success("¡Espacio guardado! Inicia sesión.")
 
 elif opcion_ingreso == "Iniciar Sesión":
-    st.sidebar.subheader("🔑 Ingresar al Sistema")
+    st.sidebar.subheader("🔑 Angresar al Sistema")
     login_usuario = st.sidebar.text_input("Usuario:", key="log_u").strip()
     login_password = st.sidebar.text_input("Contraseña:", type="password", key="log_p")
     
@@ -205,3 +205,4 @@ if usuario_actual:
                 tx_id = f"TX-{str(uuid.uuid4())[:6].upper()}"
                 
                 registro = {
+                    "ID Operación": tx_id,
