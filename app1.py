@@ -190,9 +190,7 @@ if usuario_actual:
                 st.markdown("---")
                 st.subheader("📥 Descargar Reporte")
                 
-                buffer_excel = io.BytesIO()
-                with pd.ExcelWriter(buffer_excel, engine="openpyxl") as writer:
-                    df_filtrado.to_excel(writer, index=False, sheet_name="Historial_Pagos")
+               
                 
                 st.download_button(
                     label="🟢 Descargar este Historial Filtrado en Excel (.xlsx)",
