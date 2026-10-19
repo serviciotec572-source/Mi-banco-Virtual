@@ -10,8 +10,8 @@ from datetime import datetime
 
 # 1. Configuración estética de la plataforma
 st.set_page_config(page_title="Mi Red Virtual Alfanumérica", page_icon="⚡", layout="centered")
-st.title("⚡ Red Virtual Financiera Alfanumérica")
-st.write("Manejo de créditos mediante códigos únicos. ¡Invita a tus amigos y gana bonos!")
+st.title("⚡ Red Virtual Financiera Alfanumérica Pro")
+st.write("Manejo de créditos avanzados, transferencias globales, préstamos y analíticas.")
 
 # 2. SISTEMA DE BASE DE DATOS PERMANENTE (Archivo JSON en el Servidor)
 ARCHIVO_BD = "base_datos_banco.json"
@@ -72,38 +72,34 @@ if opcion_ingreso == "Registrarse":
             cuentas_alfanumericas = {}
             for i, nombre in enumerate(nombres_base):
                 codigo_acc = generar_codigo_cuenta()
-                # Saldo base (10 millones a la cuenta principal del creador)
                 saldo = 10000000 if i == 0 else random.randint(500000, 3000000)
                 cuentas_alfanumericas[codigo_acc] = {
                     "titular": nombre,
                     "saldo": saldo
                 }
             
-            # Generar código de referido propio de este usuario (ej: REF-JUAN7)
             codigo_referido_propio = f"REF-{reg_usuario[:4].upper()}{random.randint(10,99)}"
             
             st.session_state.base_datos_usuarios[reg_usuario] = {
                 "password": reg_password,
                 "codigo_referido": codigo_referido_propio,
                 "cuentas": cuentas_alfanumericas,
-                "historial": []
+                "historial": [],
+                "prestamos": []
             }
             
-            # LÓGICA DEL BOT DE BONOS EN LÍNEA CORREGIDA [Tomando el índice [0] explícito]
             bono_aplicado = False
             if codigo_invitacion != "":
                 for usuario_sistema, datos_sistema in st.session_state.base_datos_usuarios.items():
                     if datos_sistema.get("codigo_referido") == codigo_invitacion:
-                        # Extraer de forma segura el primer código de cuenta del anfitrión
                         cuentas_anfitrion = list(datos_sistema["cuentas"].keys())
                         if cuentas_anfitrion:
-                            primera_cuenta_anfitrion = cuentas_anfitrion[0]  # <- CORREGIDO: Se extrae el primer elemento string
+                            primera_cuenta_anfitrion = cuentas_anfitrion[0]
                             datos_sistema["cuentas"][primera_cuenta_anfitrion]["saldo"] += 50000
                         
-                        # Extraer de forma segura el primer código de cuenta del nuevo usuario
                         cuentas_nuevas = list(cuentas_alfanumericas.keys())
                         if cuentas_nuevas:
-                            primera_cuenta_nuevo = cuentas_nuevas[0]  # <- CORREGIDO: Se extrae el primer elemento string
+                            primera_cuenta_nuevo = cuentas_nuevas[0]
                             cuentas_alfanumericas[primera_cuenta_nuevo]["saldo"] += 50000
                         
                         bono_aplicado = True
@@ -144,11 +140,17 @@ if "usuario_logueado" in st.session_state:
 # CUERPO PRINCIPAL: VISIBLE CON SESIÓN
 # ==========================================
 if usuario_actual:
+    if "prestamos" not in st.session_state.base_datos_usuarios[usuario_actual]:
+        st.session_state.base_datos_usuarios[usuario_actual]["prestamos"] = []
+        
     mis_datos = st.session_state.base_datos_usuarios[usuario_actual]
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Directorio y Saldos", "⚡ Envíos Alfanuméricos", "🔍 Auditoría y Reportes", "📢 Invitar Amigos"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "📊 Directorio y Saldos", "⚡ Envíos Alfanuméricos", "🏦 Solicitud Préstamos",
+        "📈 Analíticas Visuales", "🔍 Auditoría y Reportes", "📢 Invitar Amigos"
+    ])
     
     # ------------------------------------------
-    # PESTAÑA 1: DIRECTORIO DE CUENTAS ALFANUMÉRICAS
+    # PESTAÑA 1: DIRECTORIO DE CUENTAS Y CREACIÓN
     # ------------------------------------------
     with tab1:
         st.subheader("📋 Cuentas Alfanuméricas Autorizadas")
@@ -163,44 +165,47 @@ if usuario_actual:
         df_saldos = pd.DataFrame(tabla_saldos)
         st.dataframe(df_saldos, use_container_width=True, hide_index=True)
         
-        st.markdown("---")
-        st.subheader("✏️ Configurar Titular o Monto")
-        cuenta_a_cambiar = st.selectbox("Selecciona la cuenta (Código):", list(mis_datos["cuentas"].keys()))
-        nombre_actual = mis_datos["cuentas"][cuenta_a_cambiar]["titular"]
-        monto_actual = mis_datos["cuentas"][cuenta_a_cambiar]["saldo"]
-        
-        nuevo_titular = st.text_input("Modificar Titular:", value=nombre_actual)
-        nuevo_monto_directo = st.number_input("Modificar Saldo Directamente:", min_value=0, value=int(monto_actual), step=1000)
-        
-        if st.button("💾 Guardar Cambios", use_container_width=True):
-            nuevo_titular = nuevo_titular.strip()
-            if nuevo_titular == "":
-                st.error("El nombre del titular no puede estar vacío.")
-            else:
-                mis_datos["cuentas"][cuenta_a_cambiar]["titular"] = nuevo_titular
-                mis_datos["cuentas"][cuenta_a_cambiar]["saldo"] = nuevo_monto_directo
-                guardar_base_datos(st.session_state.base_datos_usuarios)
-                st.success(f"Cuenta {cuenta_a_cambiar} actualizada con éxito.")
-                st.rerun()
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### ➕ Crear Nueva Cuenta")
+            nombre_nueva_cuenta = st.text_input("Nombre del Titular de la cuenta:", placeholder="Ej: Mi Caja de Ahorros")
+            if st.button("✨ Generar Cuenta Única", use_container_width=True):
+                if nombre_nueva_cuenta.strip() == "":
+                    st.error("Por favor, ingresa un nombre para el titular.")
+                else:
+                    nuevo_cod = generar_codigo_cuenta()
+                    mis_datos["cuentas"][nuevo_cod] = {"titular": nombre_nueva_cuenta.strip(), "saldo": 0}
+                    guardar_base_datos(st.session_state.base_datos_usuarios)
+                    st.success(f"Cuenta {nuevo_cod} creada con éxito.")
+                    st.rerun()
+                    
+        with col2:
+            st.markdown("### ✏️ Configurar Existente")
+            cuenta_a_cambiar = st.selectbox("Selecciona cuenta a editar:", list(mis_datos["cuentas"].keys()))
+            nombre_actual = mis_datos["cuentas"][cuenta_a_cambiar]["titular"]
+            monto_actual = mis_datos["cuentas"][cuenta_a_cambiar]["saldo"]
+            
+            nuevo_titular = st.text_input("Modificar Titular:", value=nombre_actual)
+            nuevo_monto_directo = st.number_input("Modificar Saldo:", min_value=0, value=int(monto_actual), step=1000)
+            
+            if st.button("💾 Guardar Cambios", use_container_width=True):
+                if nuevo_titular.strip() == "":
+                    st.error("El titular no puede estar vacío.")
+                else:
+                    mis_datos["cuentas"][cuenta_a_cambiar]["titular"] = nuevo_titular.strip()
+                    mis_datos["cuentas"][cuenta_a_cambiar]["saldo"] = nuevo_monto_directo
+                    guardar_base_datos(st.session_state.base_datos_usuarios)
+                    st.success("Cambios aplicados correctamente.")
+                    st.rerun()
 
     # ------------------------------------------
-    # PESTAÑA 2: ENVÍOS ALFANUMÉRICOS (TRANSFERENCIAS)
+    # PESTAÑA 2: ENVÍOS ALFANUMÉRICOS (INTERBANCARIOS)
     # ------------------------------------------
     with tab2:
-        st.subheader("💸 Transferencia Rápida de Créditos")
+        st.subheader("💸 Transferencias de Créditos Extensivas")
+        tipo_envio = st.radio("Tipo de transferencia:", ["Mis Cuentas Propias", "A otro Usuario del Sistema"])
         
-        cuenta_origen = st.selectbox("Selecciona tu cuenta de origen:", list(mis_datos["cuentas"].keys()), key="origen")
-        cuenta_destino = st.selectbox("Selecciona la cuenta de destino:", list(mis_datos["cuentas"].keys()), key="destino")
-        
+        cuenta_origen = st.selectbox("Selecciona tu cuenta de origen:", list(mis_datos["cuentas"].keys()), key="origen_pro")
         monto_transferir = st.number_input("Monto a enviar (COP):", min_value=1, value=10000, step=5000)
         
-        if st.button("⚡ Ejecutar Transferencia", use_container_width=True):
-            if cuenta_origen == cuenta_destino:
-                st.error("No puedes transferir fondos a la misma cuenta de origen.")
-            elif mis_datos["cuentas"][cuenta_origen]["saldo"] < monto_transferir:
-                st.error("Fondos insuficientes en la cuenta seleccionada.")
-            else:
-                # Procesar montos
-                mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
-                mis_datos["cuentas"][cuenta_destino]["saldo"] += monto_transferir
-                
+        if tipo_envio == "Mis Cuentas Propias":
