@@ -89,24 +89,29 @@ if opcion_ingreso == "Registrarse":
                 "historial": []
             }
             
-            # LÓGICA DEL BOT DE BONOS COMPATIBLE
+            # LÓGICA DEL BOT DE BONOS EN LÍNEA CORREGIDA [Tomando el índice [0] explícito]
             bono_aplicado = False
             if codigo_invitacion != "":
                 for usuario_sistema, datos_sistema in st.session_state.base_datos_usuarios.items():
                     if datos_sistema.get("codigo_referido") == codigo_invitacion:
-                        # Encontrar la cuenta principal de quien lo invitó y sumarle el bono
-                        primera_cuenta_anfitrion = list(datos_sistema["cuentas"].keys())[0]
-                        datos_sistema["cuentas"][primera_cuenta_anfitrion]["saldo"] += 50000
+                        # Extraer de forma segura el primer código de cuenta del anfitrión
+                        cuentas_anfitrion = list(datos_sistema["cuentas"].keys())
+                        if cuentas_anfitrion:
+                            primera_cuenta_anfitrion = cuentas_anfitrion[0]  # <- CORREGIDO: Se extrae el primer elemento string
+                            datos_sistema["cuentas"][primera_cuenta_anfitrion]["saldo"] += 50000
                         
-                        # Sumarle el bono a la cuenta principal del nuevo usuario
-                        primera_cuenta_nuevo = list(cuentas_alfanumericas.keys())[0]
-                        cuentas_alfanumericas[primera_cuenta_nuevo]["saldo"] += 50000
+                        # Extraer de forma segura el primer código de cuenta del nuevo usuario
+                        cuentas_nuevas = list(cuentas_alfanumericas.keys())
+                        if cuentas_nuevas:
+                            primera_cuenta_nuevo = cuentas_nuevas[0]  # <- CORREGIDO: Se extrae el primer elemento string
+                            cuentas_alfanumericas[primera_cuenta_nuevo]["saldo"] += 50000
+                        
                         bono_aplicado = True
                         break
             
             guardar_base_datos(st.session_state.base_datos_usuarios)
             if bono_aplicado:
-                st.sidebar.success(f"🎁 ¡Bono activado! +50.000 créditos para ti y tu amigo. Inicia sesión.")
+                st.sidebar.success("🎁 ¡Bono activado! +50.000 créditos para ambos. Inicia sesión.")
             else:
                 st.sidebar.success("¡Espacio guardado! Inicia sesión.")
 
@@ -199,10 +204,3 @@ if usuario_actual:
                 mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
                 mis_datos["cuentas"][cuenta_destino]["saldo"] += monto_transferir
                 
-                # Registrar en el historial
-                fecha_movimiento = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                transaccion = {
-                    "fecha": fecha_movimiento,
-                    "origen": cuenta_origen,
-                    "destino": cuenta_destino,
-                    "monto": monto_transferir,
