@@ -198,7 +198,7 @@ if usuario_actual:
                     st.success("Cambios aplicados correctamente.")
                     st.rerun()
 
-    # ------------------------------------------
+        # ------------------------------------------
     # PESTAÑA 2: ENVÍOS ALFANUMÉRICOS (INTERBANCARIOS)
     # ------------------------------------------
     with tab2:
@@ -209,3 +209,57 @@ if usuario_actual:
         monto_transferir = st.number_input("Monto a enviar (COP):", min_value=1, value=10000, step=5000)
         
         if tipo_envio == "Mis Cuentas Propias":
+            cuenta_destino = st.selectbox("Selecciona tu cuenta de destino:", list(mis_datos["cuentas"].keys()), key="destino_pro")
+            
+            if st.button("⚡ Ejecutar Transferencia Interna", use_container_width=True):
+                if cuenta_origen == cuenta_destino:
+                    st.error("No puedes transferir fondos a la misma cuenta de origen.")
+                elif mis_datos["cuentas"][cuenta_origen]["saldo"] < monto_transferir:
+                    st.error("Fondos insuficientes.")
+                else:
+                    mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
+                    mis_datos["cuentas"][cuenta_destino]["saldo"] += monto_transferir
+                    
+                    mis_datos["historial"].append({
+                        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "origen": cuenta_origen, 
+                        "destino": cuenta_destino, 
+                        "monto": monto_transferir,
+                        "detalle": "Transferencia interna entre tus cuentas"
+                    })
+                    guardar_base_datos(st.session_state.base_datos_usuarios)
+                    st.success("¡Envío interno exitoso!")
+                    st.rerun()
+                    
+        else:
+            cuenta_externa = st.text_input("Ingresa el código de cuenta destino (Ej: ACC-XXXXX):").strip().upper()
+            
+            if st.button("🌍 Transferir a Cuenta Externa", use_container_width=True):
+                if mis_datos["cuentas"][cuenta_origen]["saldo"] < monto_transferir:
+                    st.error("Fondos insuficientes.")
+                else:
+                    encontrado = False
+                    bd_global = st.session_state.base_datos_usuarios
+                    
+                    for usr, datos in bd_global.items():
+                        if cuenta_externa in datos["cuentas"]:
+                            mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
+                            datos["cuentas"][cuenta_externa]["saldo"] += monto_transferir
+                            
+                            fecha_m = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            mis_datos["historial"].append({
+                                "fecha": fecha_m, "origen": cuenta_origen, "destino": cuenta_externa,
+                                "monto": monto_transferir, "detalle": f"Envío externo enviado al usuario {usr}"
+                            })
+                            datos["historial"].append({
+                                "fecha": fecha_m, "origen": cuenta_origen, "destino": cuenta_externa,
+                                "monto": monto_transferir, "detalle": f"Envío externo recibido de {usuario_actual}"
+                            })
+                            
+                            guardar_base_datos(bd_global)
+                            st.success(f"¡Transferencia global exitosa a la cuenta {cuenta_externa}!")
+                            encontrado = True
+                            st.rerun()
+                            break
+                    if not encontrado:
+                        st.error("El código de cuenta ingresado no existe en la plataforma.")
