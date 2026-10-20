@@ -147,7 +147,6 @@ if usuario_actual:
         
     mis_datos = st.session_state.base_datos_usuarios[usuario_actual]
     
-    # AGREGADA: Pestaña de nómina / salario colombiana
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Directorio y Saldos", "⚡ Envíos Alfanuméricos", "🏦 Solicitud Préstamos",
         "🧮 Calculadora Salarial (Colombia)", "📈 Analíticas Visuales", "🔍 Auditoría y Reportes", "📢 Invitar Amigos"
@@ -208,3 +207,4 @@ if usuario_actual:
                     "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "tipo": "Transferencia",
                     "origen": f"{cuenta_origen} ({mis_datos['cuentas'][cuenta_origen]['titular']})",
+                    "destino": f"{cuenta_destino} ({mis_datos['cuentas'][cuenta_destino]['titular']})",
