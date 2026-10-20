@@ -189,13 +189,15 @@ if usuario_actual:
     with tab2:
         st.subheader("⚡ Transferencias entre Cuentas Internas")
         lista_mis_cuentas = list(mis_datos["cuentas"].keys())
+     st.markdown("---")
+        st.markdown("### 📥 Depositar mi Nómina Mensual")
+        st.write("¿Quieres simular el pago de tu mes e inyectar este salario neto en una de tus cuentas virtuales?")
         
-        cuenta_origen = st.selectbox("Selecciona la cuenta de origen:", lista_mis_cuentas, key="trans_orig")
-        cuenta_destino = st.selectbox("Selecciona la cuenta de destino:", lista_mis_cuentas, key="trans_dest")
-        monto_transferir = st.number_input("Monto a transferir (COP):", min_value=1, value=10000, step=5000)
+        lista_mis_cuentas = list(mis_datos["cuentas"].keys())
+        cuenta_nomina_destino = st.selectbox("Selecciona la cuenta receptora de nómina:", lista_mis_cuentas, key="nom_dest")
         
-               if st.button("💵 Cobrar y Depositar Nómina", use_container_width=True):
-            # CORREGIDO: Se añadió el paréntesis de cierre en int()
+        if st.button("💵 Cobrar y Depositar Nómina", use_container_width=True):
+            # Sumar al saldo
             mis_datos["cuentas"][cuenta_nomina_destino]["saldo"] += int(salario_neto_real)
             
             # Registrar en la auditoría
@@ -211,4 +213,5 @@ if usuario_actual:
             
             guardar_base_datos(st.session_state.base_datos_usuarios)
             st.success(f"🎉 ¡Éxito! Se han depositado {int(salario_neto_real):,} COP en tu cuenta {cuenta_nomina_destino}.")
-            st.rerun()
+            st.rerun()     
+        
