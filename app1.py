@@ -2,6 +2,7 @@ import streamlit as st
 import random
 import json
 import os
+import pandas as pd
 from datetime import datetime
 
 # Configuración premium de la interfaz
@@ -107,7 +108,6 @@ if st.session_state.usuario_logueado is None:
         correo_reg = st.text_input("Correo electrónico único:", key="reg_email").strip().lower()
         pass_reg = st.text_input("Asigna tu contraseña de seguridad:", type="password", key="reg_pass")
         
-        # REQUERIMIENTO: El usuario ahora escoge su propio monto / saldo inicial
         monto_inicial = st.number_input("Monto / Depósito Inicial de Apertura (COP):", min_value=10000.0, value=1500000.0, step=50000.0)
         
         if st.button("🚀 Crear mi Cuenta de Ahorros", use_container_width=True):
@@ -158,7 +158,7 @@ else:
         "🧮 Liquidación Nómina", 
         "🔄 Transferir Fondos", 
         "🏦 Créditos Exprés",
-        "🔍 Extracto y Auditoría"
+        "🔍 Extracto y Analíticas"
     ])
     
     # 1. NOMINA
@@ -193,7 +193,6 @@ else:
     with tab_trans:
         st.subheader("Transferencias Interbancarias en Segundos")
         
-        # Mapeamos usando el nombre real del destinatario en lugar del correo
         cuentas_destino = {
             datos["cuenta"]: f"{datos['nombre']} ({datos['cuenta']})" 
             for correo, datos in st.session_state.usuarios_db.items() if correo != u_email
@@ -207,7 +206,6 @@ else:
                 if u_datos["saldo"] < monto_transferir:
                     st.error("Fondos insuficientes para autorizar este débito.")
                 else:
-                    # Encontrar correo del receptor
                     correo_receptor = None
                     for correo, datos in st.session_state.usuarios_db.items():
                         if datos["cuenta"] == cuenta_elegida:
@@ -215,3 +213,8 @@ else:
                             break
                             
                     fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    nombre_receptor = st.session_state.usuarios_db[correo_receptor]["nombre"]
+                    
+                    u_datos["saldo"] -= monto_transferir
+                    u_datos["historial"].append({
+                        "fecha": fecha_actual,
