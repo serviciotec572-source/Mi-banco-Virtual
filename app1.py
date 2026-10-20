@@ -67,9 +67,11 @@ st.session_state.usuarios_db = cargar_base_datos()
 # ==========================================
 if st.session_state.usuario_logueado is None:
     st.subheader("🔐 Acceso al Sistema Financiero")
-    pestana_auth = st.tabs(["Iniciar Sesión", "Registrarse"])
     
-    with pestana_auth:
+    # CORRECCIÓN AQUÍ: Desempaquetamos correctamente la lista de pestañas
+    tab_login, tab_registro = st.tabs(["Iniciar Sesión", "Registrarse"])
+    
+    with tab_login:
         correo_login = st.text_input("Correo electrónico:", key="login_email").strip().lower()
         pass_login = st.text_input("Contraseña:", type="password", key="login_pass")
         
@@ -81,7 +83,7 @@ if st.session_state.usuario_logueado is None:
             else:
                 st.error("Correo o contraseña incorrectos.")
                 
-    with pestana_auth:
+    with tab_registro:
         correo_reg = st.text_input("Crea tu correo electrónico:", key="reg_email").strip().lower()
         pass_reg = st.text_input("Crea tu contraseña:", type="password", key="reg_pass")
         
@@ -221,6 +223,3 @@ else:
                     st.rerun()
         else:
             st.info("Registra otro correo electrónico en el sistema (Cerrando sesión) para poder enviarle dinero.")
-
-    # ------------------------------------------
-    # NOVEDAD MICROCRÉDITOS (Añade historial)
