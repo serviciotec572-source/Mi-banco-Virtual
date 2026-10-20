@@ -1,210 +1,58 @@
 import streamlit as st
-import pandas as pd
-import uuid
-import json
-import os
-import io
 import random
-import urllib.parse
-from datetime import datetime
 
-# 1. Configuración estética de la plataforma
-st.set_page_config(page_title="Mi Red Virtual Alfanumérica", page_icon="⚡", layout="centered")
-st.title("⚡ Red Virtual Financiera Alfanumérica Pro")
-st.write("Manejo de créditos avanzados, transferencias globales, préstamos y analíticas.")
+# Configuración básica
+st.set_page_config(page_title="Mi Banco Corto", page_icon="⚡")
+st.title("⚡ Mi Banco Virtual Alfanumérico")
 
-# 2. SISTEMA DE BASE DE DATOS PERMANENTE (Archivo JSON en el Servidor)
-ARCHIVO_BD = "base_datos_banco.json"
+# Inicializar variables en la memoria de la aplicación
+if "saldo" not in st.session_state:
+    st.session_state.saldo = 500000.0  # Saldo inicial de cortesía
+if "cuenta" not in st.session_state:
+    num_random = random.randint(1000, 9999)
+    st.session_state.cuenta = f"ACC-{num_random}X"
 
-def cargar_base_datos():
-    if not os.path.exists(ARCHIVO_BD):
-        return {}
-    try:
-        with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
+# Valores Legales Colombia
+SMLMV = 1750905
+AUX_TRANSPORTE = 249095
 
-def guardar_base_datos(datos):
-    with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
-        json.dump(datos, f, ensure_ascii=False, indent=4)
+# --- SECCIÓN 1: DATOS DE LA CUENTA ---
+st.subheader("📊 Estado de tu Cuenta")
+st.metric(label="Número de Cuenta Alfanumérica", value=st.session_state.cuenta)
+st.metric(label="Saldo Disponible", value=f"${st.session_state.saldo:,.0f} COP")
 
-def generar_codigo_cuenta():
-    """Genera un código de cuenta alfanumérico único, ej: ACC-4F92B"""
-    codigo = "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=5))
-    return f"ACC-{codigo}"
+# --- SECCIÓN 2: CALCULADORA DE NÓMINA ---
+st.subheader("🧮 Calculadora de Nómina Rápida")
+opcion = st.radio("Selecciona tu sueldo:", ["1 Salario Mínimo", "Sueldo de 2 Millones"])
 
-# Inicializar la base de datos leyendo el archivo JSON seguro
-if "base_datos_usuarios" not in st.session_state:
-    st.session_state.base_datos_usuarios = cargar_base_datos()
+if opcion == "1 Salario Mínimo":
+    sueldo_base = float(SMLMV)
+    transporte = float(AUX_TRANSPORTE)
+else:
+    sueldo_base = 2000000.0
+    transporte = float(AUX_TRANSPORTE)  # Sigue aplicando por ser menor a 2 SMLMV
 
-# ==========================================
-# BARRA LATERAL: CONTROL DE ACCESO ESTRICTO
-# ==========================================
-st.sidebar.header("🔐 Acceso a tu Espacio Personal")
-opcion_ingreso = st.sidebar.radio("Selecciona una opción:", ["Iniciar Sesión", "Registrarse"])
+# Descuentos de ley (4% Salud y 4% Pensión)
+descuento_salud = sueldo_base * 0.04
+descuento_pension = sueldo_base * 0.04
+sueldo_neto = sueldo_base + transporte - (descuento_salud + descuento_pension)
 
-usuario_actual = None
+# Mostrar resumen corto
+st.write(f"🔹 **Sueldo Base:** ${sueldo_base:,.0f}")
+st.write(f"🔹 **Auxilio Transporte:** ${transporte:,.0f}")
+st.write(f"🔹 **Descuentos (Salud + Pensión):** -${(descuento_salud + descuento_pension):,.0f}")
+st.success(f"💰 **Total Neto a Recibir:** ${sueldo_neto:,.0f} COP")
 
-if opcion_ingreso == "Registrarse":
-    st.sidebar.subheader("📝 Crear nueva cuenta")
-    reg_usuario = st.sidebar.text_input("Elige tu usuario:", key="reg_u").strip()
-    reg_password = st.sidebar.text_input("Crea tu contraseña:", type="password", key="reg_p")
-    
-    # Campo opcional para ingresar el código de invitación de un amigo
-    codigo_invitacion = st.sidebar.text_input("Código de Invitación (Opcional):", key="reg_inv").strip().upper()
-    
-    if st.sidebar.button("🚀 Registrar mi espacio", use_container_width=True):
-        st.session_state.base_datos_usuarios = cargar_base_datos()
-        
-        if reg_usuario == "" or reg_password == "":
-            st.sidebar.error("Completa todos los campos.")
-        elif reg_usuario in st.session_state.base_datos_usuarios:
-            st.sidebar.error("Este usuario ya está registrado.")
-        else:
-            # Generar lista de personas base
-            nombres_base = [
-                "Tu_Cuenta_Principal", "Carlos_Mendoza", "Andrea_Restrepo", 
-                "Tienda_Oficina_Express", "Juan_Pablo_Diaz", "Maria_Camila_Silva", 
-                "Santiago_Gomez", "Valentina_Herrera", "Supermercado_Central", "Estacion_Servicio_Alfa"
-            ]
-            
-            cuentas_alfanumericas = {}
-            for i, nombre in enumerate(nombres_base):
-                codigo_acc = generar_codigo_cuenta()
-                saldo = 10000000 if i == 0 else random.randint(500000, 3000000)
-                cuentas_alfanumericas[codigo_acc] = {
-                    "titular": nombre,
-                    "saldo": saldo
-                }
-            
-            codigo_referido_propio = f"REF-{reg_usuario[:4].upper()}{random.randint(10,99)}"
-            
-            st.session_state.base_datos_usuarios[reg_usuario] = {
-                "password": reg_password,
-                "codigo_referido": codigo_referido_propio,
-                "cuentas": cuentas_alfanumericas,
-                "historial": [],
-                "prestamos": []
-            }
-            
-            bono_aplicado = False
-            if codigo_invitacion != "":
-                for usuario_sistema, datos_sistema in st.session_state.base_datos_usuarios.items():
-                    if datos_sistema.get("codigo_referido") == codigo_invitacion:
-                        cuentas_anfitrion = list(datos_sistema["cuentas"].keys())
-                        if cuentas_anfitrion:
-                            primera_cuenta_anfitrion = cuentas_anfitrion[0]
-                            datos_sistema["cuentas"][primera_cuenta_anfitrion]["saldo"] += 50000
-                        
-                        cuentas_nuevas = list(cuentas_alfanumericas.keys())
-                        if cuentas_nuevas:
-                            primera_cuenta_nuevo = cuentas_nuevas[0]
-                            cuentas_alfanumericas[primera_cuenta_nuevo]["saldo"] += 50000
-                        
-                        bono_aplicado = True
-                        break
-            
-            guardar_base_datos(st.session_state.base_datos_usuarios)
-            if bono_aplicado:
-                st.sidebar.success("🎁 ¡Bono activado! +50.000 créditos para ambos. Inicia sesión.")
-            else:
-                st.sidebar.success("¡Espacio guardado! Inicia sesión.")
+# --- SECCIÓN 3: ACCIONES ---
+st.subheader("⚙️ Acciones Disponibles")
 
-elif opcion_ingreso == "Iniciar Sesión":
-    st.sidebar.subheader("🔑 Ingresar al Sistema")
-    login_usuario = st.sidebar.text_input("Usuario:", key="log_u").strip()
-    login_password = st.sidebar.text_input("Contraseña:", type="password", key="log_p")
-    
-    if st.sidebar.button("🔓 Entrar", use_container_width=True):
-        st.session_state.base_datos_usuarios = cargar_base_datos()
-        
-        if login_usuario in st.session_state.base_datos_usuarios and st.session_state.base_datos_usuarios[login_usuario]["password"] == login_password:
-            st.session_state["usuario_logueado"] = login_usuario
-            st.sidebar.success(f"¡Bienvenido {login_usuario}!")
-            st.rerun()
-        else:
-            st.sidebar.error("Usuario o contraseña incorrectos.")
+if st.button("💵 Depositar mi Nómina al Saldo", use_container_width=True):
+    st.session_state.saldo += sueldo_neto
+    st.success("¡Nómina depositada con éxito!")
+    st.rerun()
 
-if "usuario_logueado" in st.session_state:
-    usuario_actual = st.session_state["usuario_logueado"]
-    st.sidebar.markdown("---")
-    st.sidebar.success(f"👤 Sesión activa: {usuario_actual}")
-    
-    if st.sidebar.button("💾 Cerrar Sesión y Guardar", use_container_width=True):
-        guardar_base_datos(st.session_state.base_datos_usuarios)
-        del st.session_state["usuario_logueado"]
-        st.rerun()
-
-# ==========================================
-# CUERPO PRINCIPAL: VISIBLE CON SESIÓN
-# ==========================================
-if usuario_actual:
-    if "prestamos" not in st.session_state.base_datos_usuarios[usuario_actual]:
-        st.session_state.base_datos_usuarios[usuario_actual]["prestamos"] = []
-    if "historial" not in st.session_state.base_datos_usuarios[usuario_actual]:
-        st.session_state.base_datos_usuarios[usuario_actual]["historial"] = []
-        
-    mis_datos = st.session_state.base_datos_usuarios[usuario_actual]
-    
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "📊 Directorio y Saldos", "⚡ Envíos Alfanuméricos", "🏦 Solicitud Préstamos",
-        "🧮 Calculadora Salarial (Colombia)", "📈 Analíticas Visuales", "🔍 Auditoría y Reportes", "📢 Invitar Amigos"
-    ])
-    
-    # ------------------------------------------
-    # PESTAÑA 1: DIRECTORIO DE CUENTAS Y CREACIÓN
-    # ------------------------------------------
-    with tab1:
-        st.subheader("📋 Cuentas Alfanuméricas Autorizadas")
-        tabla_saldos = []
-        for codigo, info in mis_datos["cuentas"].items():
-            tabla_saldos.append({
-                "Código de Cuenta": codigo,
-                "Titular de la Cuenta": info["titular"],
-                "Saldo Disponible (COP)": info["saldo"]
-            })
-        
-        df_saldos = pd.DataFrame(tabla_saldos)
-        st.dataframe(df_saldos, use_container_width=True, hide_index=True)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("### ➕ Crear Nueva Cuenta")
-            nombre_nueva_cuenta = st.text_input("Nombre del Titular de la cuenta:", placeholder="Ej: Mi Caja de Ahorros")
-            if st.button("✨ Generar Cuenta Única", use_container_width=True):
-                if nombre_nueva_cuenta.strip() == "":
-                    st.error("Por favor, ingresa un nombre para el titular.")
-                else:
-                    nuevo_cod = generar_codigo_cuenta()
-                    mis_datos["cuentas"][nuevo_cod] = {"titular": nombre_nueva_cuenta.strip(), "saldo": 0}
-                    guardar_base_datos(st.session_state.base_datos_usuarios)
-                    st.success(f"Cuenta {nuevo_cod} creada con éxito.")
-                    st.rerun()
-
-    # ------------------------------------------
-    # PESTAÑA 2: ENVÍOS ALFANUMÉRICOS
-    # ------------------------------------------
-    with tab2:
-        st.subheader("⚡ Transferencias entre Cuentas Internas")
-        lista_mis_cuentas = list(mis_datos["cuentas"].keys())
-        
-        cuenta_origen = st.selectbox("Selecciona la cuenta de origen:", lista_mis_cuentas, key="trans_orig")
-        cuenta_destino = st.selectbox("Selecciona la cuenta de destino:", lista_mis_cuentas, key="trans_dest")
-        monto_transferir = st.number_input("Monto a transferir (COP):", min_value=1, value=10000, step=5000)
-        
-        if st.button("🚀 Confirmar Transferencia", use_container_width=True):
-            if cuenta_origen == cuenta_destino:
-                st.error("La cuenta de origen y destino no pueden ser la misma.")
-            elif mis_datos["cuentas"][cuenta_origen]["saldo"] < monto_transferir:
-                st.error("Saldo insuficiente en la cuenta de origen.")
-            else:
-                mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
-                mis_datos["cuentas"][cuenta_destino]["saldo"] += monto_transferir
-                
-                transaccion = {
-                    "id": str(uuid.uuid4())[:8].upper(),
-                    "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "tipo": "Transferencia",
-                    "origen": f"{cuenta_origen} ({mis_datos['cuentas'][cuenta_origen]['titular']})",
-                    "destino": f"{cuenta_destino} ({mis_datos['cuentas'][cuenta_destino]['titular']})",
+if st.button("🔄 Reiniciar Cuenta (Borrar Todo)", use_container_width=True):
+    st.session_state.saldo = 500000.0
+    num_random = random.randint(1000, 9999)
+    st.session_state.cuenta = f"ACC-{num_random}X"
+    st.rerun()
