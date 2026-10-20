@@ -189,29 +189,22 @@ if usuario_actual:
     with tab2:
         st.subheader("⚡ Transferencias entre Cuentas Internas")
         lista_mis_cuentas = list(mis_datos["cuentas"].keys())
-     st.markdown("---")
-        st.markdown("### 📥 Depositar mi Nómina Mensual")
-        st.write("¿Quieres simular el pago de tu mes e inyectar este salario neto en una de tus cuentas virtuales?")
         
-        lista_mis_cuentas = list(mis_datos["cuentas"].keys())
-        cuenta_nomina_destino = st.selectbox("Selecciona la cuenta receptora de nómina:", lista_mis_cuentas, key="nom_dest")
+        cuenta_origen = st.selectbox("Selecciona la cuenta de origen:", lista_mis_cuentas, key="trans_orig")
+        cuenta_destino = st.selectbox("Selecciona la cuenta de destino:", lista_mis_cuentas, key="trans_dest")
+        monto_transferir = st.number_input("Monto a transferir (COP):", min_value=1, value=10000, step=5000)
         
-        if st.button("💵 Cobrar y Depositar Nómina", use_container_width=True):
-            # Sumar al saldo
-            mis_datos["cuentas"][cuenta_nomina_destino]["saldo"] += int(salario_neto_real)
-            
-            # Registrar en la auditoría
-            transaccion = {
-                "id": f"NOM-{random.randint(1000, 9999)}",
-                "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "tipo": "Pago de Nómina",
-                "origen": "Empresa Simulada S.A.",
-                "destino": f"{cuenta_nomina_destino} ({mis_datos['cuentas'][cuenta_nomina_destino]['titular']})",
-                "monto": int(salario_neto_real)
-            }
-            mis_datos["historial"].append(transaccion)
-            
-            guardar_base_datos(st.session_state.base_datos_usuarios)
-            st.success(f"🎉 ¡Éxito! Se han depositado {int(salario_neto_real):,} COP en tu cuenta {cuenta_nomina_destino}.")
-            st.rerun()     
-        
+        if st.button("🚀 Confirmar Transferencia", use_container_width=True):
+            if cuenta_origen == cuenta_destino:
+                st.error("La cuenta de origen y destino no pueden ser la misma.")
+            elif mis_datos["cuentas"][cuenta_origen]["saldo"] < monto_transferir:
+                st.error("Saldo insuficiente en la cuenta de origen.")
+            else:
+                mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
+                mis_datos["cuentas"][cuenta_destino]["saldo"] += monto_transferir
+                
+                transaccion = {
+                    "id": str(uuid.uuid4())[:8].upper(),
+                    "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "tipo": "Transferencia",
+                    "origen": f"{cuenta_origen} ({mis_datos['cuentas'][cuenta_origen]['titular']})",
