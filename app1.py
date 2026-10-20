@@ -208,3 +208,4 @@ if usuario_actual:
                     "tipo": "Transferencia",
                     "origen": f"{cuenta_origen} ({mis_datos['cuentas'][cuenta_origen]['titular']})",
                     "destino": f"{cuenta_destino} ({mis_datos['cuentas'][cuenta_destino]['titular']})",
+
