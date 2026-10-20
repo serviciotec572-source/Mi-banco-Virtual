@@ -142,11 +142,15 @@ if "usuario_logueado" in st.session_state:
 if usuario_actual:
     if "prestamos" not in st.session_state.base_datos_usuarios[usuario_actual]:
         st.session_state.base_datos_usuarios[usuario_actual]["prestamos"] = []
+    if "historial" not in st.session_state.base_datos_usuarios[usuario_actual]:
+        st.session_state.base_datos_usuarios[usuario_actual]["historial"] = []
         
     mis_datos = st.session_state.base_datos_usuarios[usuario_actual]
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    
+    # AGREGADA: Pestaña de nómina / salario colombiana
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Directorio y Saldos", "⚡ Envíos Alfanuméricos", "🏦 Solicitud Préstamos",
-        "📈 Analíticas Visuales", "🔍 Auditoría y Reportes", "📢 Invitar Amigos"
+        "🧮 Calculadora Salarial (Colombia)", "📈 Analíticas Visuales", "🔍 Auditoría y Reportes", "📢 Invitar Amigos"
     ])
     
     # ------------------------------------------
@@ -178,88 +182,29 @@ if usuario_actual:
                     guardar_base_datos(st.session_state.base_datos_usuarios)
                     st.success(f"Cuenta {nuevo_cod} creada con éxito.")
                     st.rerun()
-                    
-        with col2:
-            st.markdown("### ✏️ Configurar Existente")
-            cuenta_a_cambiar = st.selectbox("Selecciona cuenta a editar:", list(mis_datos["cuentas"].keys()))
-            nombre_actual = mis_datos["cuentas"][cuenta_a_cambiar]["titular"]
-            monto_actual = mis_datos["cuentas"][cuenta_a_cambiar]["saldo"]
-            
-            nuevo_titular = st.text_input("Modificar Titular:", value=nombre_actual)
-            nuevo_monto_directo = st.number_input("Modificar Saldo:", min_value=0, value=int(monto_actual), step=1000)
-            
-            if st.button("💾 Guardar Cambios", use_container_width=True):
-                if nuevo_titular.strip() == "":
-                    st.error("El titular no puede estar vacío.")
-                else:
-                    mis_datos["cuentas"][cuenta_a_cambiar]["titular"] = nuevo_titular.strip()
-                    mis_datos["cuentas"][cuenta_a_cambiar]["saldo"] = nuevo_monto_directo
-                    guardar_base_datos(st.session_state.base_datos_usuarios)
-                    st.success("Cambios aplicados correctamente.")
-                    st.rerun()
 
-        # ------------------------------------------
-    # PESTAÑA 2: ENVÍOS ALFANUMÉRICOS (INTERBANCARIOS)
+    # ------------------------------------------
+    # PESTAÑA 2: ENVÍOS ALFANUMÉRICOS
     # ------------------------------------------
     with tab2:
-        st.subheader("💸 Transferencias de Créditos Extensivas")
-        tipo_envio = st.radio("Tipo de transferencia:", ["Mis Cuentas Propias", "A otro Usuario del Sistema"])
+        st.subheader("⚡ Transferencias entre Cuentas Internas")
+        lista_mis_cuentas = list(mis_datos["cuentas"].keys())
         
-        cuenta_origen = st.selectbox("Selecciona tu cuenta de origen:", list(mis_datos["cuentas"].keys()), key="origen_pro")
-        monto_transferir = st.number_input("Monto a enviar (COP):", min_value=1, value=10000, step=5000)
+        cuenta_origen = st.selectbox("Selecciona la cuenta de origen:", lista_mis_cuentas, key="trans_orig")
+        cuenta_destino = st.selectbox("Selecciona la cuenta de destino:", lista_mis_cuentas, key="trans_dest")
+        monto_transferir = st.number_input("Monto a transferir (COP):", min_value=1, value=10000, step=5000)
         
-        if tipo_envio == "Mis Cuentas Propias":
-            cuenta_destino = st.selectbox("Selecciona tu cuenta de destino:", list(mis_datos["cuentas"].keys()), key="destino_pro")
-            
-            if st.button("⚡ Ejecutar Transferencia Interna", use_container_width=True):
-                if cuenta_origen == cuenta_destino:
-                    st.error("No puedes transferir fondos a la misma cuenta de origen.")
-                elif mis_datos["cuentas"][cuenta_origen]["saldo"] < monto_transferir:
-                    st.error("Fondos insuficientes.")
-                else:
-                    mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
-                    mis_datos["cuentas"][cuenta_destino]["saldo"] += monto_transferir
-                    
-                    mis_datos["historial"].append({
-                        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "origen": cuenta_origen, 
-                        "destino": cuenta_destino, 
-                        "monto": monto_transferir,
-                        "detalle": "Transferencia interna entre tus cuentas"
-                    })
-                    guardar_base_datos(st.session_state.base_datos_usuarios)
-                    st.success("¡Envío interno exitoso!")
-                    st.rerun()
-                    
-        else:
-            cuenta_externa = st.text_input("Ingresa el código de cuenta destino (Ej: ACC-XXXXX):").strip().upper()
-            
-            if st.button("🌍 Transferir a Cuenta Externa", use_container_width=True):
-                if mis_datos["cuentas"][cuenta_origen]["saldo"] < monto_transferir:
-                    st.error("Fondos insuficientes.")
-                else:
-                    encontrado = False
-                    bd_global = st.session_state.base_datos_usuarios
-                    
-                    for usr, datos in bd_global.items():
-                        if cuenta_externa in datos["cuentas"]:
-                            mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
-                            datos["cuentas"][cuenta_externa]["saldo"] += monto_transferir
-                            
-                            fecha_m = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            mis_datos["historial"].append({
-                                "fecha": fecha_m, "origen": cuenta_origen, "destino": cuenta_externa,
-                                "monto": monto_transferir, "detalle": f"Envío externo enviado al usuario {usr}"
-                            })
-                            datos["historial"].append({
-                                "fecha": fecha_m, "origen": cuenta_origen, "destino": cuenta_externa,
-                                "monto": monto_transferir, "detalle": f"Envío externo recibido de {usuario_actual}"
-                            })
-                            
-                            guardar_base_datos(bd_global)
-                            st.success(f"¡Transferencia global exitosa a la cuenta {cuenta_externa}!")
-                            encontrado = True
-                            st.rerun()
-                            break
-                    if not encontrado:
-                        st.error("El código de cuenta ingresado no existe en la plataforma.")
+        if st.button("🚀 Confirmar Transferencia", use_container_width=True):
+            if cuenta_origen == cuenta_destino:
+                st.error("La cuenta de origen y destino no pueden ser la misma.")
+            elif mis_datos["cuentas"][cuenta_origen]["saldo"] < monto_transferir:
+                st.error("Saldo insuficiente en la cuenta de origen.")
+            else:
+                mis_datos["cuentas"][cuenta_origen]["saldo"] -= monto_transferir
+                mis_datos["cuentas"][cuenta_destino]["saldo"] += monto_transferir
+                
+                transaccion = {
+                    "id": str(uuid.uuid4())[:8].upper(),
+                    "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "tipo": "Transferencia",
+                    "origen": f"{cuenta_origen} ({mis_datos['cuentas'][cuenta_origen]['titular']})",
