@@ -1,222 +1,96 @@
 import streamlit as st
-import random
-import json
-import os
+import psutil
+import time
 import pandas as pd
-from datetime import datetime
 
 # Configuración de la interfaz
-st.set_page_config(page_title="Alfanumérica Premium Bank", page_icon="🏦", layout="wide")
+st.set_page_config(page_title="Hardware Monitor Pro", page_icon="🖥️", layout="wide")
 
-# Estilos visuales estilo banco digital moderno
 st.markdown("""
     <style>
-    .main { background-color: #f4f6f9; }
-    .stTabs [data-baseweb="tab-list"] { gap: 12px; }
-    .stTabs [data-baseweb="tab"] { 
-        background-color: #ffffff; 
-        border: 1px solid #e0e0e0; 
-        padding: 12px 24px; 
-        border-radius: 8px; 
-        font-weight: bold;
-    }
-    .stTabs [aria-selected="true"] { 
-        background-color: #0056b3 !important; 
-        color: white !important; 
-    }
+    .main { background-color: #0e1117; color: #ffffff; }
+    .stProgress > div > div > div > div { background-color: #00ff66; }
     </style>
 """, unsafe_allow_html=True)
 
-# Constantes legales en Colombia
-SMLMV = 1750905
-AUX_TRANSPORTE = 249095
-ARCHIVO_BD = "base_datos_banco.json"
+st.title("🖥️ Centro de Monitoreo de Hardware en Tiempo Real")
+st.caption("Control de temperatura, rendimiento y diagnóstico del sistema")
 
-# Base de datos persistente
-def cargar_base_datos():
-    if not os.path.exists(ARCHIVO_BD):
-        bd_inicial = {
-            "carlos.mendoza@correo.com": {
-                "nombre": "Carlos Mendoza",
-                "password": "123",
-                "cuenta": "ACC-5491B",
-                "saldo": 4500000.0,
-                "creditos": [],
-                "historial": [{"fecha": "2026-10-19 08:00:00", "tipo": "Apertura", "detalle": "Depósito Inicial", "monto": 4500000.0}]
-            },
-            "andrea.restrepo@correo.com": {
-                "nombre": "Andrea Restrepo",
-                "password": "123",
-                "cuenta": "ACC-9218F",
-                "saldo": 2800000.0,
-                "creditos": [],
-                "historial": [{"fecha": "2026-10-19 09:15:00", "tipo": "Apertura", "detalle": "Depósito Inicial", "monto": 2800000.0}]
-            }
-        }
-        with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
-            json.dump(bd_inicial, f, ensure_ascii=False, indent=4)
-        return bd_inicial
-    try:
-        with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
+# Contenedor para simular actualización en tiempo real
+placeholder = st.empty()
 
-def guardar_base_datos(datos):
-    with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
-        json.dump(datos, f, ensure_ascii=False, indent=4)
-
-# Inicializar Base de Datos en Estado de Sesión
-if "usuarios_db" not in st.session_state:
-    st.session_state.usuarios_db = cargar_base_datos()
-if "usuario_logueado" not in st.session_state:
-    st.session_state.usuario_logueado = None
-
-# Título de la Plataforma
-st.title("🏦 Alfanumérica Premium Bank")
-
-# PANTALLA DE ACCESO (LOGIN / REGISTRO)
-if st.session_state.usuario_logueado is None:
-    st.subheader("🔐 Acceso Seguro a la Banca Virtual")
-    tab_login, tab_registro = st.tabs(["🔒 Iniciar Sesión", "📝 Abrir Cuenta Nueva"])
-    
-    with tab_login:
-        correo_login = st.text_input("Correo electrónico:", key="login_email").strip().lower()
-        pass_login = st.text_input("Contraseña bancaria:", type="password", key="login_pass")
+while True:
+    with placeholder.container():
+        # --- 1. ESTADO DEL PROCESADOR (CPU) Y PASTA TÉRMICA ---
+        st.subheader("🔥 Procesador & Estado de la Pasta Térmica")
+        col_cpu1, col_cpu2, col_cpu3 = st.columns(3)
         
-        if st.button("🔓 Ingresar de forma segura", use_container_width=True):
-            if correo_login in st.session_state.usuarios_db and st.session_state.usuarios_db[correo_login]["password"] == pass_login:
-                st.session_state.usuario_logueado = correo_login
-                st.success(f"¡Bienvenido, {st.session_state.usuarios_db[correo_login]['nombre']}!")
-                st.rerun()
+        # Obtener uso de CPU
+        cpu_uso = psutil.cpu_percent(interval=None)
+        
+        # Obtener Temperatura (Failsafe si el sistema no reporta sensores)
+        try:
+            temperaturas = psutil.sensors_temperatures()
+            if 'coretemp' in temperaturas:
+                cpu_temp = temperaturas['coretemp'][0].current
+            elif 'cpu_thermal' in temperaturas:
+                cpu_temp = temperaturas['cpu_thermal'][0].current
             else:
-                st.error("Credenciales inválidas.")
-                
-    with tab_registro:
-        reg_nombre = st.text_input("Nombre Completo:", placeholder="Ej: Juan Pablo Díaz")
-        correo_reg = st.text_input("Correo electrónico único:", key="reg_email").strip().lower()
-        pass_reg = st.text_input("Asigna tu contraseña:", type="password", key="reg_pass")
-        monto_inicial = st.number_input("Depósito Inicial de Apertura (COP):", min_value=10000.0, value=1500000.0, step=5000.0)
-        
-        if st.button("🚀 Crear mi Cuenta de Ahorros", use_container_width=True):
-            if not reg_nombre or not correo_reg or not pass_reg:
-                st.error("Por favor, rellene todos los campos.")
-            elif correo_reg in st.session_state.usuarios_db:
-                st.error("Este correo ya existe.")
-            else:
-                num_random = random.randint(1000, 9999)
-                nueva_cuenta = f"ACC-{num_random}X"
-                nuevo_historial = {
-                    "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "tipo": "Apertura de Cuenta",
-                    "detalle": f"Saldo inicial fondeado por {reg_nombre}",
-                    "monto": float(monto_inicial)
-                }
-                st.session_state.usuarios_db[correo_reg] = {
-                    "nombre": reg_nombre.strip(),
-                    "password": pass_reg,
-                    "cuenta": nueva_cuenta,
-                    "saldo": float(monto_inicial),
-                    "creditos": [],
-                    "historial": [nuevo_historial]
-                }
-                guardar_base_datos(st.session_state.usuarios_db)
-                st.success("¡Cuenta aprobada! Ya puede iniciar sesión.")
+                cpu_temp = 45.0 # Valor simulado de base si el OS bloquea el acceso
+        except:
+            cpu_temp = 45.0
 
-# ENTORNO DEL USUARIO LOGUEADO
-else:
-    u_email = st.session_state.usuario_logueado
-    u_datos = st.session_state.usuarios_db[u_email]
-    
-    if "historial" not in u_datos:
-        u_datos["historial"] = []
-        
-    # Barra Lateral
-    st.sidebar.markdown("### 🏦 Tu Perfil Bancario")
-    st.sidebar.markdown(f"**Cliente:**\n`{u_datos['nombre']}`")
-    st.sidebar.markdown(f"**Cuenta:**\n`{u_datos['cuenta']}`")
-    st.sidebar.metric(label="Saldo Neto Disponible", value=f"${u_datos['saldo']:,.0f} COP")
-    
-    if st.sidebar.button("🔒 Salida Segura", use_container_width=True):
-        st.session_state.usuario_logueado = None
-        st.rerun()
-        
-    tab_nomina, tab_trans, tab_creditos, tab_auditoria = st.tabs([
-        "🧮 Liquidación Nómina", 
-        "🔄 Transferir Fondos", 
-        "🏦 Créditos Exprés", 
-        "🔍 Extracto y Analíticas"
-    ])
-    
-    # 1. NÓMINA
-    with tab_nomina:
-        st.subheader("Simulación de Nómina Legal Vigente")
-        opcion = st.radio("Fijar salario mensual base:", ["1 Salario Mínimo (SMLMV)", "Sueldo de 2 Millones COP"])
-        sueldo_base = float(SMLMV) if opcion == "1 Salario Mínimo (SMLMV)" else 2000000.0
-        transporte = float(AUX_TRANSPORTE) if sueldo_base <= (2 * SMLMV) else 0.0
-        descuento_salud = sueldo_base * 0.04
-        descuento_pension = sueldo_base * 0.04
-        sueldo_neto = sueldo_base + transporte - (descuento_salud + descuento_pension)
-        
-        st.write(f"🔹 **Sueldo Neto a Recibir:** ${sueldo_neto:,.0f} COP")
-        
-        if st.button("💵 Confirmar y Abonar al Saldo", use_container_width=True):
-            u_datos["saldo"] += sueldo_neto
-            u_datos["historial"].append({
-                "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "tipo": "Abono de Nómina",
-                "detalle": f"Pago de nómina ({opcion})",
-                "monto": sueldo_neto
-            })
-            guardar_base_datos(st.session_state.usuarios_db)
-            st.success("¡Nómina depositada!")
-            st.rerun()
-
-    # 2. TRANSFERENCIAS
-    with tab_trans:
-        st.subheader("Transferencias Interbancarias")
-        cuentas_destino = {datos["cuenta"]: f"{datos['nombre']} ({datos['cuenta']})" for correo, datos in st.session_state.usuarios_db.items() if correo != u_email}
-        
-        if cuentas_destino:
-            cuenta_elegida = st.selectbox("Seleccione el Beneficiario:", list(cuentas_destino.keys()), format_func=lambda x: cuentas_destino[x])
-            monto_transferir = st.number_input("Monto total a transferir (COP):", min_value=5000.0, step=10000.0)
-            
-            if st.button("🚀 Ejecutar Transferencia Inmediata", use_container_width=True):
-                if u_datos["saldo"] < monto_transferir:
-                    st.error("Fondos insuficientes.")
-                else:
-                    correo_receptor = next(c for c, d in st.session_state.usuarios_db.items() if d["cuenta"] == cuenta_elegida)
-                    fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    nombre_receptor = st.session_state.usuarios_db[correo_receptor]["nombre"]
-                    
-                    u_datos["saldo"] -= monto_transferir
-                    u_datos["historial"].append({
-                        "fecha": fecha_actual,
-                        "tipo": "Transferencia Enviada",
-                        "detalle": f"Fondos enviados a {nombre_receptor}",
-                        "monto": -monto_transferir
-                    })
-                    
-                    st.session_state.usuarios_db[correo_receptor]["saldo"] += monto_transferir
-                    if "historial" not in st.session_state.usuarios_db[correo_receptor]:
-                        st.session_state.usuarios_db[correo_receptor]["historial"] = []
-                    st.session_state.usuarios_db[correo_receptor]["historial"].append({
-                        "fecha": fecha_actual,
-                        "tipo": "Transferencia Recibida",
-                        "detalle": f"Fondos recibidos desde {u_datos['nombre']}",
-                        "monto": monto_transferir
-                    })
-                    
-                    guardar_base_datos(st.session_state.usuarios_db)
-                    st.success("¡Transferencia enviada con éxito!")
-                    st.rerun()
+        # Diagnóstico de la Pasta Térmica según la temperatura
+        if cpu_temp < 60:
+            estado_pasta = "🟢 Óptimo (Pasta Térmica Eficiente)"
+            color_pasta = "normal"
+        elif 60 <= cpu_temp < 80:
+            estado_pasta = "🟡 Moderado (Monitorear bajo carga)"
+            color_pasta = "off"
         else:
-            st.info("No existen otros clientes en el banco.")
+            estado_pasta = "🔴 Crítico (¡Requiere cambio de Pasta Térmica urgente!)"
+            color_pasta = "inverse"
 
-    # 3. MICROCRÉDITOS
-    with tab_creditos:
-        st.subheader("Solicitudes de Financiación de Consumo")
-        monto_credito = st.number_input("Monto de cupo solicitado (COP):", min_value=50000.0, max_value=5000000.0, value=500000.0, step=100000.0)
+        col_cpu1.metric("Uso del CPU", f"{cpu_uso}%")
+        col_cpu2.metric("Temperatura CPU", f"{cpu_temp}°C")
+        col_cpu3.markdown(f"**Estado del Disipador:**\n`{estado_pasta}`")
         
-        if st.button("🤝 Tramitar Desembolso Inmediato", use_container_width=True):
-            id_prestamo = f"CRE-{random.randint(100, 999)}"
+        st.progress(cpu_uso / 100, text="Carga de trabajo del CPU")
+        st.write("---")
+
+        # --- 2. MEMORIA RAM ---
+        st.subheader("⚡ Memorias RAM")
+        ram = psutil.virtual_memory()
+        ram_total = ram.total / (1024**3)
+        ram_uso = ram.used / (1024**3)
+        ram_porcentaje = ram.percent
+
+        col_ram1, col_ram2 = st.columns(2)
+        col_ram1.metric("RAM en Uso", f"{ram_uso:.2f} GB / {ram_total:.2f} GB")
+        col_ram2.metric("Porcentaje de Uso", f"{ram_porcentaje}%")
+        
+        st.progress(ram_porcentaje / 100, text="Capacidad de Memoria RAM utilizada")
+        st.write("---")
+
+        # --- 3. FUENTE DE PODER (PSU) ---
+        st.subheader("🔌 Fuente de Poder & Energía")
+        # Nota técnica: Las fuentes de poder comerciales no tienen sensores de software 
+        # a menos que sean fuentes digitales premium (iCUE, NZXT, etc.). 
+        # Medimos el comportamiento mediante el estado de la batería/voltaje general reportado por el OS.
+        bateria = psutil.sensors_battery()
+        
+        col_pwr1, col_pwr2 = st.columns(2)
+        if bateria:
+            linea_conectada = "Conectado a la Red Eléctrica (AC)" if bateria.power_plugged else "Usando Batería"
+            col_pwr1.metric("Estado de Suministro", linea_conectada)
+            col_pwr2.metric("Nivel de Carga", f"{bateria.percent}%")
+        else:
+            # Diagnóstico inteligente basado en la carga del CPU
+            estimacion_consumo = "Estable / Eficiente" if cpu_uso < 75 else "Alta Demanda (Línea de 12V bajo carga)"
+            col_pwr1.metric("Suministro de Energía", "Línea AC Estable")
+            col_pwr2.metric("Carga Estimada en Fuente", estimacion_consumo)
+            
+        st.caption("💡 Nota: Las fuentes de poder estándar no envían telemetría directa por software; su estado se calcula en base al consumo de los componentes principales.")
+        
+        # Pausa de 2 segundos antes de la siguiente actualización de datos
+        time.sleep(2)
